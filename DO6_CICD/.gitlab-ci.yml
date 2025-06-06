@@ -1,0 +1,48 @@
+stages:
+  - style
+  - build
+  - test
+  - deploy
+
+clang-format-test-job:
+  stage: style
+  script:
+    - echo "Checking files for a clang format."
+    - clang-format -n -Werror src/cat/*.c src/cat/*.h src/grep/*.c src/grep/*.h
+  after_script:
+    - bash src/part6.sh
+
+build-job:
+  stage: build
+  script: 
+    - echo "Building projects"
+    - cd src/cat && make s21_cat && cd ../grep && make s21_grep
+  artifacts:
+    paths:
+    - src/cat/s21_cat
+    - src/grep/s21_grep
+    expire_in: 30 days
+  after_script:
+    - bash src/part6.sh
+
+unit-test-job:
+  stage: test
+  script:
+    - echo "Testing."
+    - cd src/cat && bash *.sh > out.txt && cd ../grep && bash *.sh > out.txt
+    - |
+      if ! grep -q  "FAIL: 0" out.txt || ! grep -q  "FAIL: 0" ../cat/out.txt; then 
+        exit 1
+      fi
+  after_script:
+    - bash src/part6.sh
+
+deploy-job:
+  stage: deploy
+  script:
+    - cd src
+    - chmod 777 part5.sh
+    - bash part5.sh
+  when: manual
+  after_script:
+    - bash src/part6.sh
